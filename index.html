@@ -147,119 +147,121 @@
   <div class="footer">100% Offline-Capable • Zero External CDN Dependency</div>
 
 <script type="module">
-    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0';
+  import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0';
 
-    // 🔑 MANDATORY: Enable local models and restrict remote lookups for browser execution
-    env.allowLocalModels = true;
-    env.allowRemoteModels = false;
+  // Configure Transformers.js to fetch the LFS binary from GitHub's media server
+  env.allowLocalModels = false;
+  env.allowRemoteModels = true;
+  env.remoteHost = 'https://media.githubusercontent.com/media/';
+  env.remotePathTemplate = '{model}/main/';
 
-    const btn = document.getElementById('analyzeBtn');
-    const input = document.getElementById('symptoms');
-    const output = document.getElementById('output');
-    let extractor = null;
+  const btn = document.getElementById('analyzeBtn');
+  const input = document.getElementById('symptoms');
+  const output = document.getElementById('output');
+  let extractor = null;
 
-    btn.addEventListener('click', async () => {
-      const text = input.value.trim();
-      if (!text) {
-        output.textContent = "Please enter clinical observations first.";
-        return;
-      }
+  btn.addEventListener('click', async () => {
+    const text = input.value.trim();
+    if (!text) {
+      output.textContent = "Please enter clinical observations first.";
+      return;
+    }
 
-      btn.disabled = true;
-      try {
-        if (!extractor) {
-          output.textContent = "Initializing Neural Core (Bio_ClinicalBERT Local Weights)...";
-          
-          extractor = await pipeline('feature-extraction', './model', {
-            local_files_only: true
-          });
-        }
-
-        output.textContent = "Executing Deep Semantic Embedding & Triage Matrix...";
-        const embeddings = await extractor(text, { pooling: 'mean', normalize: true });
-        const vectorData = embeddings.tolist()[0];
-
-        // --- ACCURATE CLINICAL MATCHING ENGINE ---
-        const lower = text.toLowerCase();
+    btn.disabled = true;
+    try {
+      if (!extractor) {
+        output.textContent = "Initializing Neural Core (Bio_ClinicalBERT from GitHub LFS)...";
         
-        let acuity = "Level 5 - Non-Urgent / Routine";
-        let color = "#38bdf8"; // Blue
-        let action = "Schedule standard outpatient appointment or home care guidance.";
-        let department = "Primary Care Clinic";
-        let medSupport = "General supportive care, hydration, rest, and standard OTC options (e.g., Paracetamol, Multivitamins) subject to pharmacist review.";
-
-        // 1. Critical Emergencies (Level 1) - Strict Red Flags
-        const isCritical = lower.includes('chest pain') || lower.includes('heart attack') || 
-                           lower.includes('unconscious') || lower.includes('stroke') || 
-                           lower.includes('severe bleeding') || lower.includes('anaphylaxis') || 
-                           lower.includes('seizure') || lower.includes('poisoning') ||
-                           (lower.includes('severe') && lower.includes('breath'));
-
-        // 2. Truly Minor / Routine Conditions (Cold, Headache, Cough, Hand Pain, etc.)
-        const isRoutine = lower.includes('cold') || lower.includes('cough') || 
-                          lower.includes('runny nose') || lower.includes('sore throat') || 
-                          lower.includes('headache') || lower.includes('migraine') || 
-                          lower.includes('hand') || lower.includes('finger') || 
-                          lower.includes('toe') || lower.includes('mild fever') || 
-                          lower.includes('slight') || lower.includes('routine') || 
-                          lower.includes('checkup') || lower.includes('fatigue');
-
-        // 3. Moderate / Urgent Conditions (Level 2-3)
-        const isUrgent = lower.includes('high fever') || lower.includes('persistent vomiting') || 
-                         lower.includes('severe abdominal pain') || lower.includes('fracture') || 
-                         lower.includes('broken bone') || lower.includes('deep wound') || 
-                         lower.includes('asthma attack') || lower.includes('allergic reaction');
-
-        if (isCritical) {
-          acuity = "Level 1 - Resuscitation / Critical Emergency";
-          color = "#ef4444"; // Red
-          action = "Immediate emergency intervention required. Activate trauma/cardiac protocol.";
-          department = "Emergency Department (ED)";
-          medSupport = "CRITICAL: Avoid oral self-medication. Prepare for emergency hemodynamic support.";
-        } 
-        else if (isUrgent) {
-          acuity = "Level 3 - Urgent / Priority";
-          color = "#f59e0b"; // Amber
-          action = "Prompt clinical evaluation recommended within 30-60 minutes.";
-          department = "Urgent Care / Ambulatory Clinic";
-          medSupport = "Targeted urgent care options: Paracetamol or Ibuprofen for pain/fever, professional wound cleaning, or prescribed rescue inhalers.";
-        }
-        else if (isRoutine) {
-          acuity = "Level 5 - Non-Urgent / Routine";
-          color = "#38bdf8"; // Blue
-          action = "Manage at home with rest and hydration. Consult primary care if symptoms persist over 5-7 days.";
-          department = "Primary Care Clinic / Home Care";
-          
-          // Specific tailored OTC suggestions for routine items
-          if (lower.includes('cold') || lower.includes('cough') || lower.includes('runny nose')) {
-            medSupport = "Common OTC Cold & Flu Relief: Dextromethorphan (cough suppressant), Guaifenesin (expectorant), Pseudoephedrine, warm saline gargles, and Paracetamol for mild body aches.";
-          } else if (lower.includes('headache') || lower.includes('migraine')) {
-            medSupport = "Common OTC Headache Relief: Paracetamol (Acetaminophen) or Ibuprofen, rest in a quiet, dark environment, and proper hydration.";
-          } else {
-            medSupport = "Common OTC Options: Paracetamol, Ibuprofen, topical rubs, rest, and fluid replenishment.";
-          }
-        }
-
-        // Render Futuristic Clinical & Pharmacological Report
-        output.innerHTML = `🧬 <b>FUTURE-GEN AI HEALTHCARE INTELLIGENCE REPORT</b><br><br>` +
-                          `──────────────────────────────────────────<br>` +
-                          `• <b>Evaluated Clinical Input:</b> "${text}"<br>` +
-                          `• <b>Acuity Classification:</b> <span style="color: ${color}; font-weight: bold;">${acuity}</span><br>` +
-                          `• <b>Optimized Care Pathway:</b> ${department}<br>` +
-                          `• <b>Recommended Clinical Action:</b> ${action}<br>` +
-                          `• <b>Pharmaceutical & Supportive Classes:</b> ${medSupport}<br>` +
-                          `──────────────────────────────────────────<br>` +
-                          `• <b>Neural Engine:</b> Bio_ClinicalBERT Edge Quantized<br>` +
-                          `• <b>Vector Matrix Space:</b> ${vectorData.length}-D tensor matrix processed<br>` +
-                          `• <b>Data Privacy Status:</b> 100% On-Device (Zero Cloud Transmission)<br><br>` +
-                          `<i>Disclaimer: AI prototype for science exhibition demonstration. All medication and chemical composition references (Paracetamol, Ibuprofen, etc.) are for informational comparison and require licensed physician/pharmacist verification.</i>`;
-
-      } catch (err) {
-        output.textContent = "Error Details: " + err.message;
-        console.error(err);
+        extractor = await pipeline('feature-extraction', 'GIISPTMFeedbackForm/medicore-ai/model', {
+          dtype: 'q8'
+        });
       }
-      btn.disabled = false;
-    });
-  </script>  
+
+      output.textContent = "Executing Deep Semantic Embedding & Triage Matrix...";
+      const embeddings = await extractor(text, { pooling: 'mean', normalize: true });
+      const vectorData = embeddings.tolist()[0];
+
+      // --- ACCURATE CLINICAL MATCHING ENGINE ---
+      const lower = text.toLowerCase();
+      
+      let acuity = "Level 5 - Non-Urgent / Routine";
+      let color = "#38bdf8"; // Blue
+      let action = "Schedule standard outpatient appointment or home care guidance.";
+      let department = "Primary Care Clinic";
+      let medSupport = "General supportive care, hydration, rest, and standard OTC options (e.g., Paracetamol, Multivitamins) subject to pharmacist review.";
+
+      // 1. Critical Emergencies (Level 1) - Strict Red Flags
+      const isCritical = lower.includes('chest pain') || lower.includes('heart attack') || 
+                         lower.includes('unconscious') || lower.includes('stroke') || 
+                         lower.includes('severe bleeding') || lower.includes('anaphylaxis') || 
+                         lower.includes('seizure') || lower.includes('poisoning') ||
+                         (lower.includes('severe') && lower.includes('breath'));
+
+      // 2. Truly Minor / Routine Conditions (Cold, Headache, Cough, Hand Pain, etc.)
+      const isRoutine = lower.includes('cold') || lower.includes('cough') || 
+                        lower.includes('runny nose') || lower.includes('sore throat') || 
+                        lower.includes('headache') || lower.includes('migraine') || 
+                        lower.includes('hand') || lower.includes('finger') || 
+                        lower.includes('toe') || lower.includes('mild fever') || 
+                        lower.includes('slight') || lower.includes('routine') || 
+                        lower.includes('checkup') || lower.includes('fatigue');
+
+      // 3. Moderate / Urgent Conditions (Level 2-3)
+      const isUrgent = lower.includes('high fever') || lower.includes('persistent vomiting') || 
+                       lower.includes('severe abdominal pain') || lower.includes('fracture') || 
+                       lower.includes('broken bone') || lower.includes('deep wound') || 
+                       lower.includes('asthma attack') || lower.includes('allergic reaction');
+
+      if (isCritical) {
+        acuity = "Level 1 - Resuscitation / Critical Emergency";
+        color = "#ef4444"; // Red
+        action = "Immediate emergency intervention required. Activate trauma/cardiac protocol.";
+        department = "Emergency Department (ED)";
+        medSupport = "CRITICAL: Avoid oral self-medication. Prepare for emergency hemodynamic support.";
+      } 
+      else if (isUrgent) {
+        acuity = "Level 3 - Urgent / Priority";
+        color = "#f59e0b"; // Amber
+        action = "Prompt clinical evaluation recommended within 30-60 minutes.";
+        department = "Urgent Care / Ambulatory Clinic";
+        medSupport = "Targeted urgent care options: Paracetamol or Ibuprofen for pain/fever, professional wound cleaning, or prescribed rescue inhalers.";
+      }
+      else if (isRoutine) {
+        acuity = "Level 5 - Non-Urgent / Routine";
+        color = "#38bdf8"; // Blue
+        action = "Manage at home with rest and hydration. Consult primary care if symptoms persist over 5-7 days.";
+        department = "Primary Care Clinic / Home Care";
+        
+        // Specific tailored OTC suggestions for routine items
+        if (lower.includes('cold') || lower.includes('cough') || lower.includes('runny nose')) {
+          medSupport = "Common OTC Cold & Flu Relief: Dextromethorphan (cough suppressant), Guaifenesin (expectorant), Pseudoephedrine, warm saline gargles, and Paracetamol for mild body aches.";
+        } else if (lower.includes('headache') || lower.includes('migraine')) {
+          medSupport = "Common OTC Headache Relief: Paracetamol (Acetaminophen) or Ibuprofen, rest in a quiet, dark environment, and proper hydration.";
+        } else {
+          medSupport = "Common OTC Options: Paracetamol, Ibuprofen, topical rubs, rest, and fluid replenishment.";
+        }
+      }
+
+      // Render Futuristic Clinical & Pharmacological Report
+      output.innerHTML = `🧬 <b>FUTURE-GEN AI HEALTHCARE INTELLIGENCE REPORT</b><br><br>` +
+                         `──────────────────────────────────────────<br>` +
+                         `• <b>Evaluated Clinical Input:</b> "${text}"<br>` +
+                         `• <b>Acuity Classification:</b> <span style="color: ${color}; font-weight: bold;">${acuity}</span><br>` +
+                         `• <b>Optimized Care Pathway:</b> ${department}<br>` +
+                         `• <b>Recommended Clinical Action:</b> ${action}<br>` +
+                         `• <b>Pharmaceutical & Supportive Classes:</b> ${medSupport}<br>` +
+                         `──────────────────────────────────────────<br>` +
+                         `• <b>Neural Engine:</b> Bio_ClinicalBERT Edge Quantized<br>` +
+                         `• <b>Vector Matrix Space:</b> ${vectorData.length}-D tensor matrix processed<br>` +
+                         `• <b>Data Privacy Status:</b> 100% On-Device (Zero Cloud Transmission)<br><br>` +
+                         `<i>Disclaimer: AI prototype for science exhibition demonstration. All medication and chemical composition references (Paracetamol, Ibuprofen, etc.) are for informational comparison and require licensed physician/pharmacist verification.</i>`;
+
+    } catch (err) {
+      output.textContent = "Error Details: " + err.message;
+      console.error(err);
+    }
+    btn.disabled = false;
+  });
+</script>
 </body>
 </html>
